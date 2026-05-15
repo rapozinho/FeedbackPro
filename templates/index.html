@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FeedbackPro — Compartilhe sua experiência</title>
+  <meta name="description" content="Envie sua avaliação e ajude-nos a melhorar continuamente nossos produtos e serviços." />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+
+  <!-- ── NAVBAR ── -->
+  <nav class="navbar">
+    <div class="navbar__brand">
+      <span class="dot">●</span> FeedbackPro
+    </div>
+    <div class="navbar__links">
+      <a href="#como-funciona">Como funciona</a>
+      <a href="/admin/login" class="btn-sm">Painel Admin</a>
+    </div>
+  </nav>
+
+  <!-- ── HERO + FORM ── -->
+  <section class="hero">
+    <span class="hero__badge">
+      ✦ Sua opinião importa
+    </span>
+    <h1 class="hero__title">
+      Compartilhe sua <span>experiência</span> conosco
+    </h1>
+    <p class="hero__sub">
+      Leva menos de um minuto e nos ajuda a melhorar continuamente para você.
+    </p>
+
+    <!-- ALERTAS -->
+    {% if sucesso %}
+    <div class="alert alert-success reveal visible" role="alert">
+      <span>✅</span>
+      <span><strong>Obrigado!</strong> Seu feedback foi registrado com sucesso.</span>
+    </div>
+    {% endif %}
+
+    {% if erros %}
+    <div class="alert alert-danger reveal visible" role="alert">
+      <span>⚠️</span>
+      <div>
+        <strong>Por favor, corrija os campos abaixo:</strong>
+        <ul>
+          {% for e in erros %}<li>{{ e | safe }}</li>{% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- FORMULÁRIO -->
+    <div class="card reveal" id="form-card">
+      <h2 class="card__title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Novo Feedback
+      </h2>
+      <form action="/enviar" method="POST" id="feedback-form" novalidate>
+        <!-- Nome -->
+        <div class="form-group">
+          <label for="nome">Nome <span class="req">*</span></label>
+          <input
+            type="text"
+            id="nome"
+            name="nome"
+            class="form-control"
+            placeholder="Como você se chama?"
+            value="{{ nome or '' }}"
+            autocomplete="name"
+          />
+        </div>
+
+        <!-- Nota (star rating) -->
+        <div class="form-group">
+          <label>Nota <span class="req">*</span></label>
+          <div class="star-rating" id="star-rating" role="radiogroup" aria-label="Avaliação de 1 a 5 estrelas">
+            {% for i in range(5, 0, -1) %}
+            <input type="radio" id="star{{ i }}" name="nota" value="{{ i }}" />
+            <label for="star{{ i }}" title="{{ i }} estrela{% if i > 1 %}s{% endif %}">★</label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Comentário -->
+        <div class="form-group">
+          <label for="comentario">Comentário <span style="color:var(--clr-muted);font-weight:400;">(opcional)</span></label>
+          <textarea
+            id="comentario"
+            name="comentario"
+            class="form-control"
+            placeholder="Conte-nos mais sobre sua experiência..."
+          >{{ comentario or '' }}</textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="submit-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Enviar Feedback
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ── COMO FUNCIONA (scroll reveal) ── -->
+  <section class="section" id="como-funciona">
+    <div class="section__header reveal">
+      <h2>Por que seu feedback é essencial?</h2>
+      <p>Cada avaliação nos ajuda a tomar decisões melhores, mais rápidas e baseadas em dados reais.</p>
+    </div>
+    <div class="features-grid reveal-group">
+      <div class="feature-card reveal">
+        <div class="feature-card__icon">📊</div>
+        <h3>Dados em tempo real</h3>
+        <p>Todos os registros ficam disponíveis instantaneamente no painel administrativo.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-card__icon">🔒</div>
+        <h3>Acesso seguro</h3>
+        <p>A área de gestão é protegida por autenticação e acessível apenas aos administradores.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-card__icon">⭐</div>
+        <h3>Avaliação simples</h3>
+        <p>Sistema de 1 a 5 estrelas — intuitivo, rápido e eficaz para qualquer perfil de usuário.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-card__icon">🔍</div>
+        <h3>Filtro por nota</h3>
+        <p>Administradores podem filtrar feedbacks por nota para identificar padrões com agilidade.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>© 2024 FeedbackPro · Sistema acadêmico de coleta de feedback · Desenvolvido com Flask + SQLite</p>
+  </footer>
+
+  <!-- ── INTERSECTION OBSERVER (scroll reveal) ── -->
+  <script>
+    (function() {
+      "use strict";
+
+      /* Marca elementos visíveis já no load */
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.15 });
+
+      document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+      /* Dispara imediatamente para o card do hero */
+      const heroCard = document.getElementById('form-card');
+      if (heroCard) {
+        setTimeout(() => heroCard.classList.add('visible'), 120);
+      }
+    })();
+  </script>
+
+</body>
+</html>

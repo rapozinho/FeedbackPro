@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FeedbackPro — Painel Administrativo</title>
+  <meta name="description" content="Painel de gestão de feedbacks recebidos." />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+
+<div class="admin-wrapper">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="sidebar__logo">
+      <span class="dot">●</span> FeedbackPro
+    </div>
+    <nav class="sidebar__nav">
+      <a href="/admin" class="active" id="nav-dashboard">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a href="/" id="nav-public" target="_blank">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Formulário Público
+      </a>
+      <a href="/api/feedbacks" id="nav-api" target="_blank">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        API JSON
+      </a>
+    </nav>
+    <div class="sidebar__footer">
+      <a href="/admin/logout" id="logout-link">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sair
+      </a>
+    </div>
+  </aside>
+
+  <!-- ── CONTEÚDO PRINCIPAL ── -->
+  <main class="admin-main">
+
+    <!-- Cabeçalho -->
+    <div class="admin-header reveal">
+      <div>
+        <h1>Dashboard</h1>
+        <p>Visão geral de todos os feedbacks recebidos</p>
+      </div>
+      <div style="display:flex;gap:.6rem;">
+        <a href="/api/feedbacks" target="_blank" class="btn btn-outline" id="export-json-btn" style="display:inline-flex;align-items:center;gap:.4rem;text-decoration:none;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar JSON
+        </a>
+      </div>
+    </div>
+
+    <!-- ── STAT CARDS ── -->
+    <div class="stats-row reveal-group">
+      <div class="stat-card reveal">
+        <div class="stat-card__label">Total de Feedbacks</div>
+        <div class="stat-card__value" id="stat-total">{{ total }}</div>
+        <div class="stat-card__sub">registros no banco de dados</div>
+      </div>
+      <div class="stat-card reveal">
+        <div class="stat-card__label">Média Geral</div>
+        <div class="stat-card__value" id="stat-media">
+          {{ media if media else '—' }}
+          <span style="font-size:1rem;color:var(--clr-warn);">{% if media %}★{% endif %}</span>
+        </div>
+        <div class="stat-card__sub">nota média dos clientes</div>
+      </div>
+      <div class="stat-card reveal" style="grid-column: span 1;">
+        <div class="stat-card__label">Distribuição por Nota</div>
+        <div class="dist-bars" id="dist-chart">
+          {% set max_count = [dist[1], dist[2], dist[3], dist[4], dist[5]] | max %}
+          {% for n in range(5, 0, -1) %}
+          {% set pct = (dist[n] / max_count * 100) | round | int if max_count > 0 else 0 %}
+          <div class="dist-bar">
+            <span class="dist-bar__label">{{ n }}</span>
+            <div class="dist-bar__track">
+              <div class="dist-bar__fill" style="width:{{ pct }}%"></div>
+            </div>
+            <span class="dist-bar__count">{{ dist[n] }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ── FILTRO ── -->
+    <form method="GET" action="/admin" class="filter-bar reveal" id="filter-form">
+      <label for="nota-filter">Filtrar por nota:</label>
+      <select name="nota" id="nota-filter" onchange="this.form.submit()">
+        <option value="">Todas as notas</option>
+        {% for i in range(1, 6) %}
+        <option value="{{ i }}" {% if nota_filtro == i|string %}selected{% endif %}>
+          {{ '★' * i }}{{ '☆' * (5 - i) }} — {{ i }} estrela{% if i > 1 %}s{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+      {% if nota_filtro %}
+      <a href="/admin" class="btn btn-outline" id="clear-filter-btn">✕ Limpar filtro</a>
+      {% endif %}
+      <span style="margin-left:auto;font-size:.82rem;color:var(--clr-muted);">
+        {{ feedbacks | length }} resultado{% if feedbacks | length != 1 %}s{% endif %}
+      </span>
+    </form>
+
+    <!-- ── TABELA ── -->
+    <div class="table-wrap reveal" id="feedbacks-table">
+      {% if feedbacks %}
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Nome</th>
+            <th>Nota</th>
+            <th>Avaliação</th>
+            <th>Comentário</th>
+            <th>Data</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fb in feedbacks %}
+          <tr id="row-{{ fb.id }}">
+            <td class="muted">{{ fb.id }}</td>
+            <td style="font-weight:600;">{{ fb.nome }}</td>
+            <td>
+              <span class="badge-nota nota-{{ fb.nota }}">
+                {{ fb.nota }}★ {{ fb.label }}
+              </span>
+            </td>
+            <td>
+              <span class="stars">{{ '★' * fb.nota }}</span><span class="stars dim">{{ '★' * (5 - fb.nota) }}</span>
+            </td>
+            <td style="max-width:280px;color:var(--clr-label);">
+              {% if fb.comentario %}
+                {{ fb.comentario | truncate(90) }}
+              {% else %}
+                <span class="muted">—</span>
+              {% endif %}
+            </td>
+            <td class="muted">{{ fb.criado_em }}</td>
+            <td>
+              <form
+                action="/admin/excluir/{{ fb.id }}"
+                method="POST"
+                onsubmit="return confirmarExclusao({{ fb.id }})"
+                style="display:inline;"
+                id="del-form-{{ fb.id }}"
+              >
+                <button type="submit" class="btn btn-danger" id="del-btn-{{ fb.id }}" title="Excluir feedback">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                  Excluir
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty-state">
+        <div class="icon">📭</div>
+        <p>
+          {% if nota_filtro %}
+            Nenhum feedback com nota <strong>{{ nota_filtro }}</strong> encontrado.
+          {% else %}
+            Nenhum feedback recebido ainda. <a href="/">Compartilhe o formulário!</a>
+          {% endif %}
+        </p>
+      </div>
+      {% endif %}
+    </div>
+
+  </main><!-- /admin-main -->
+</div><!-- /admin-wrapper -->
+
+<!-- ── SCRIPTS ── -->
+<script>
+  "use strict";
+
+  /* Scroll reveal */
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.reveal').forEach(el => {
+    setTimeout(() => observer.observe(el), 50);
+  });
+
+  /* Confirmação de exclusão */
+  function confirmarExclusao(id) {
+    return window.confirm(
+      `Tem certeza que deseja excluir o feedback #${id}?\n\nEsta ação é irreversível.`
+    );
+  }
+</script>
+
+</body>
+</html>

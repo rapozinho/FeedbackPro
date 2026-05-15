@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FeedbackPro — Login Administrativo</title>
+  <meta name="description" content="Acesso restrito ao painel de administração do FeedbackPro." />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+
+  <div class="login-page">
+    <div class="login-box">
+      <div class="login-box__header">
+        <div class="icon">🔐</div>
+        <h1>Acesso Administrativo</h1>
+        <p>Área restrita — apenas gestores autorizados</p>
+      </div>
+
+      {% if erro %}
+      <div class="alert alert-danger" role="alert">
+        <span>⚠️</span> {{ erro }}
+      </div>
+      {% endif %}
+
+      <form action="/admin/login" method="POST" id="login-form">
+        <div class="form-group">
+          <label for="usuario">Usuário <span class="req">*</span></label>
+          <input
+            type="text"
+            id="usuario"
+            name="usuario"
+            class="form-control"
+            placeholder="Digite seu usuário"
+            autocomplete="username"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label for="senha">Senha <span class="req">*</span></label>
+          <input
+            type="password"
+            id="senha"
+            name="senha"
+            class="form-control"
+            placeholder="••••••••"
+            autocomplete="current-password"
+            required
+          />
+        </div>
+        <button type="submit" class="btn btn-primary" id="login-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+          Entrar
+        </button>
+      </form>
+
+      <p style="text-align:center;margin-top:1.5rem;font-size:.8rem;color:var(--clr-muted);">
+        <a href="/">← Voltar para o formulário público</a>
+      </p>
+    </div>
+  </div>
+
+</body>
+</html>
