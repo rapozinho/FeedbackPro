@@ -118,13 +118,23 @@
             <th>Nota</th>
             <th>Avaliação</th>
             <th>Comentário</th>
+            <th>Foto</th>
             <th>Data</th>
             <th>Ação</th>
           </tr>
         </thead>
         <tbody>
           {% for fb in feedbacks %}
-          <tr id="row-{{ fb.id }}">
+          <tr id="row-{{ fb.id }}" 
+              class="clickable-row"
+              data-id="{{ fb.id }}"
+              data-nome="{{ fb.nome }}"
+              data-nota="{{ fb.nota }}"
+              data-label="{{ fb.label }}"
+              data-comentario="{{ fb.comentario or '' }}"
+              data-data="{{ fb.criado_em }}"
+              data-fotos="{{ fb.foto or '' }}"
+              onclick="openModal(this)">
             <td class="muted">{{ fb.id }}</td>
             <td style="font-weight:600;">{{ fb.nome }}</td>
             <td>
@@ -142,6 +152,19 @@
                 <span class="muted">—</span>
               {% endif %}
             </td>
+            <td>
+              {% if fb.foto %}
+                {% set fotos = fb.foto.split(',') %}
+                <div style="display:flex; align-items:center; gap: .4rem;">
+                  <img src="{{ url_for('static', filename='uploads/' + fotos[0]) }}" alt="Foto" style="max-width: 45px; max-height: 45px; border-radius: 4px; object-fit: cover; border: 1px solid var(--clr-border);">
+                  {% if fotos|length > 1 %}
+                    <span class="badge-nota nota-4" style="font-size: .7rem; padding: .15rem .4rem;">+{{ fotos|length - 1 }}</span>
+                  {% endif %}
+                </div>
+              {% else %}
+                <span class="muted">—</span>
+              {% endif %}
+            </td>
             <td class="muted">{{ fb.criado_em }}</td>
             <td>
               <form
@@ -150,6 +173,7 @@
                 onsubmit="return confirmarExclusao({{ fb.id }})"
                 style="display:inline;"
                 id="del-form-{{ fb.id }}"
+                onclick="event.stopPropagation();"
               >
                 <button type="submit" class="btn btn-danger" id="del-btn-{{ fb.id }}" title="Excluir feedback">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
@@ -176,6 +200,35 @@
     </div>
 
   </main><!-- /admin-main -->
+  
+  <!-- ── MODAL DE DETALHES ── -->
+  <div id="feedback-modal" class="modal-overlay">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div class="modal-header">
+        <h2 id="modal-nome">Nome do Cliente</h2>
+        <div id="modal-nota" class="badge-nota"></div>
+      </div>
+      <p class="modal-data" id="modal-data">10/10/2023</p>
+      
+      <div class="modal-body">
+        <h4>Comentário</h4>
+        <p id="modal-comentario" class="modal-text"></p>
+        
+        <div id="modal-fotos-container" style="display:none;">
+          <h4>Fotos</h4>
+          <div id="modal-fotos" class="modal-gallery"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LIGHTBOX PARA FOTOS ── -->
+  <div id="lightbox" class="lightbox-overlay" onclick="closeLightbox()">
+    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    <img id="lightbox-img" src="" alt="Foto Expandida">
+  </div>
+
 </div><!-- /admin-wrapper -->
 
 <!-- ── SCRIPTS ── -->
@@ -201,6 +254,76 @@
     return window.confirm(
       `Tem certeza que deseja excluir o feedback #${id}?\n\nEsta ação é irreversível.`
     );
+  }
+
+  /* Modal de Detalhes */
+  const modal = document.getElementById('feedback-modal');
+  
+  function openModal(row) {
+    const nome = row.getAttribute('data-nome');
+    const nota = row.getAttribute('data-nota');
+    const label = row.getAttribute('data-label');
+    const comentario = row.getAttribute('data-comentario');
+    const data = row.getAttribute('data-data');
+    const fotos = row.getAttribute('data-fotos');
+
+    document.getElementById('modal-nome').textContent = nome;
+    document.getElementById('modal-nota').className = `badge-nota nota-${nota}`;
+    document.getElementById('modal-nota').textContent = `${nota}★ ${label}`;
+    document.getElementById('modal-data').textContent = data;
+    
+    const comEl = document.getElementById('modal-comentario');
+    if (comentario) {
+        comEl.textContent = comentario;
+        comEl.style.color = "var(--clr-text)";
+    } else {
+        comEl.textContent = "Nenhum comentário fornecido.";
+        comEl.style.color = "var(--clr-muted)";
+    }
+
+    const fotosContainer = document.getElementById('modal-fotos-container');
+    const fotosGallery = document.getElementById('modal-fotos');
+    fotosGallery.innerHTML = '';
+    
+    if (fotos) {
+        const fotosArray = fotos.split(',');
+        fotosArray.forEach(f => {
+            const img = document.createElement('img');
+            img.src = `/static/uploads/${f}`;
+            img.onclick = (e) => {
+                e.stopPropagation();
+                openLightbox(img.src);
+            };
+            fotosGallery.appendChild(img);
+        });
+        fotosContainer.style.display = 'block';
+    } else {
+        fotosContainer.style.display = 'none';
+    }
+
+    modal.classList.add('active');
+  }
+
+  function closeModal() {
+    modal.classList.remove('active');
+  }
+  
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  /* Lightbox */
+  const lightbox = document.getElementById('lightbox');
+  const lightboxImg = document.getElementById('lightbox-img');
+
+  function openLightbox(src) {
+    lightboxImg.src = src;
+    lightbox.classList.add('active');
+  }
+
+  function closeLightbox() {
+    lightbox.classList.remove('active');
+    setTimeout(() => { lightboxImg.src = ''; }, 300);
   }
 </script>
 

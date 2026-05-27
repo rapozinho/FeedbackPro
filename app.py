@@ -7,10 +7,12 @@ import sqlite3
 import os
 from datetime import datetime
 from functools import wraps
+import uuid
 from flask import (
     Flask, render_template, request, redirect,
     url_for, session, jsonify, flash
 )
+from werkzeug.utils import secure_filename
 
 # ---------------------------------------------------------------------------
 # Configuração
@@ -19,6 +21,13 @@ app = Flask(__name__)
 app.secret_key = "feedbackpro-secret-2024"
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "feedback.db")
+UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "static", "uploads")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Credenciais do administrador (simples, sem banco, conforme escopo)
 ADMIN_USER = "admin"
@@ -44,6 +53,7 @@ def init_db():
                 nome      TEXT    NOT NULL,
                 nota      INTEGER NOT NULL CHECK(nota BETWEEN 1 AND 5),
                 comentario TEXT,
+                foto      TEXT,
                 criado_em TEXT    NOT NULL
             )
         """)
@@ -83,6 +93,7 @@ def enviar():
     nome = request.form.get("nome", "").strip()
     nota_raw = request.form.get("nota", "").strip()
     comentario = request.form.get("comentario", "").strip()
+    fotos = request.files.getlist("foto")
 
     # Validação
     erros = []
@@ -90,6 +101,17 @@ def enviar():
         erros.append("O campo <strong>Nome</strong> é obrigatório.")
     if not nota_raw or not nota_raw.isdigit() or not (1 <= int(nota_raw) <= 5):
         erros.append("A <strong>Nota</strong> deve ser um número inteiro entre 1 e 5.")
+    
+    valid_fotos = []
+    for foto in fotos:
+        if foto and foto.filename:
+            if not allowed_file(foto.filename):
+                erros.append(f"Formato inválido no arquivo: {foto.filename}. Use PNG, JPG, JPEG ou GIF.")
+            else:
+                valid_fotos.append(foto)
+                
+    if len(valid_fotos) > 5:
+        erros.append("Você pode enviar no máximo 5 fotos.")
 
     if erros:
         return render_template("index.html", erros=erros, nome=nome, comentario=comentario)
@@ -97,10 +119,19 @@ def enviar():
     nota = int(nota_raw)
     criado_em = datetime.now().strftime("%d/%m/%Y %H:%M")
 
+    foto_filenames = []
+    for foto in valid_fotos:
+        ext = foto.filename.rsplit('.', 1)[1].lower()
+        fname = f"{uuid.uuid4().hex}.{ext}"
+        foto.save(os.path.join(app.config['UPLOAD_FOLDER'], fname))
+        foto_filenames.append(fname)
+        
+    foto_str = ",".join(foto_filenames) if foto_filenames else None
+
     with get_db() as conn:
         conn.execute(
-            "INSERT INTO feedbacks (nome, nota, comentario, criado_em) VALUES (?, ?, ?, ?)",
-            (nome, nota, comentario or None, criado_em)
+            "INSERT INTO feedbacks (nome, nota, comentario, foto, criado_em) VALUES (?, ?, ?, ?, ?)",
+            (nome, nota, comentario or None, foto_str, criado_em)
         )
         conn.commit()
 

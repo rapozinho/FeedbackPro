@@ -58,7 +58,7 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         Novo Feedback
       </h2>
-      <form action="/enviar" method="POST" id="feedback-form" novalidate>
+      <form action="/enviar" method="POST" id="feedback-form" enctype="multipart/form-data" novalidate>
         <!-- Nome -->
         <div class="form-group">
           <label for="nome">Nome <span class="req">*</span></label>
@@ -93,6 +93,48 @@
             class="form-control"
             placeholder="Conte-nos mais sobre sua experiência..."
           >{{ comentario or '' }}</textarea>
+        </div>
+
+        <!-- Seção de Foto Estilizada -->
+        <div class="photo-upload-section">
+          <h3 class="photo-upload-title">Compartilhe fotos da sua experiência</h3>
+          
+          <div class="photo-upload-info">
+            <div class="photo-upload-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                <circle cx="12" cy="13" r="4"></circle>
+              </svg>
+            </div>
+            <p>Ao compartilhá-las, você nos ajuda a visualizar melhor o seu feedback.</p>
+          </div>
+
+          <input
+            type="file"
+            id="foto"
+            name="foto"
+            class="file-upload-input"
+            accept="image/png, image/jpeg, image/jpg, image/gif"
+            multiple
+            onchange="
+              const count = this.files.length;
+              const display = document.getElementById('file-name');
+              if(count > 5) {
+                alert('Você pode selecionar no máximo 5 fotos.');
+                this.value = '';
+                display.style.display = 'none';
+              } else if(count > 0) {
+                display.textContent = Array.from(this.files).map(f => f.name).join('\n');
+                display.style.display = 'block';
+              } else {
+                display.style.display = 'none';
+              }
+            "
+          />
+          <label for="foto" class="file-upload-btn">
+            Enviar fotos
+          </label>
+          <div id="file-name" class="file-name-display"></div>
         </div>
 
         <button type="submit" class="btn btn-primary" id="submit-btn">
